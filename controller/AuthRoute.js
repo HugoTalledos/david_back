@@ -6,5 +6,6 @@ const service = require('../service/Auth');
 const router = express.Router();
 
 router.post('/', service.login);
+router.post('/logout', service.logoutService);
 
 module.exports = router;

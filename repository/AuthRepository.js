@@ -23,5 +23,15 @@ const getTokenAdmin = ({ email, password }) => {
   });
 };
 
+const logout = ({ token }) => {
 
-module.exports = { getToken, getTokenAdmin };
+  return axios.post(`${API}/admin/logout`, {}, { headers: { Authorization: token }})
+  .then(() => successRepository('success'))
+  .catch((error) => {
+    log.error(error.message);
+    return errorRepository(error);
+  })
+}
+
+
+module.exports = { getToken, getTokenAdmin, logout };

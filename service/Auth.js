@@ -3,7 +3,7 @@ const logger = require('../utils/logger');
 const { firestoreRef } = require('../drivers/firestore');
 const log = logger({ fileName: 'Auth.js' });
 
-const { getToken, getTokenAdmin } = require('../repository/AuthRepository');
+const { getToken, getTokenAdmin, logout } = require('../repository/AuthRepository');
 const { errorToResponse, successResponse } = require('../utils/utils');
 
 const login = async (req, res) => {
@@ -32,4 +32,21 @@ const login = async (req, res) => {
   }
 }
 
-module.exports = { login };
+const logoutService = async (req, res) => {
+  const { authorization  } = req.headers;
+  log.info(`Start logout`);
+  try {
+    const response = await logout({ token: authorization })
+
+    const { success, code, message } = response;
+    if (!success) return res.status(code).send(errorToResponse(message));
+
+    log.info(`Succes logout for`)
+
+    return res.send(successResponse(null, message));
+  } catch (e) {
+    log.error('Unnexpected error', e);
+  }
+}
+
+module.exports = { login, logoutService };
