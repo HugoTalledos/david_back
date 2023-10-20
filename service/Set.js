@@ -87,16 +87,23 @@ const updateSetInDb = async (req, res) => {
     log.info(`Set updated successfully`);
 
     const songConfigCollect = route.collection(songCollection); 
+
+    await songConfigCollect.get()
+      .then((querySnapshot) => {
+        querySnapshot.forEach((doc) => { doc.ref.update({ status: false }) })
+      });
+
     for (let i = 0; i < songList.length; i++) {
-      const { configId, songId, tonality, tempo, order = 0, status } = songList[i];
-      const songConfig = songConfigCollect.doc(configId);
+      const { configId, songId, tonality, tempo, order = 0, songTonality, songTempo } = songList[i];
+      const songConfig = configId != undefined ? songConfigCollect.doc(configId) : songConfigCollect.doc();
       log.info(`Updating song config: ${songId}`);
+
       await songConfig.set({
         songId,
-        tonality,
-        tempo,
+        tonality: tonality || songTonality,
+        tempo: tempo || songTempo,
         order,
-        status,
+        status: true,
         updatedAt: (new Date()).toGMTString(),
         updatedBy
       }, { merge: true });
