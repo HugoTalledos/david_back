@@ -11,6 +11,7 @@ dotenv.config();
 const setRoutes = require('./controller/SetsRoute');
 const authRoutes = require('./controller/AuthRoute');
 const songRoutes = require('./controller/SongsRoute');
+const singerRoutes = require('./controller/SingerRoute');
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.use(express.json({ extended: true, limit: '50mb' }));
 const port = process.env.PORT || 8080;
 
 app.use('/api/sets', setRoutes);
+app.use('/api/singer', singerRoutes);
 app.use('/api/songs', songRoutes);
 app.use('/api/auth', authRoutes);
 
