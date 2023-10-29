@@ -15,17 +15,18 @@ const createSingerInDb = async (req, res) => {
     const doc = await firestoreRef.collection(collection)
       .doc(singerId);
 
-    await doc.set({
-      singerId: doc.id,
-      singerName,
-      status: true,
-      createdAt:(new Date()).toGMTString(),
-      updatedAt:(new Date()).toGMTString(),
-      registerBy,
-    });
+      const body = {
+        singerId: doc.id,
+        singerName,
+        status: true,
+        createdAt:(new Date()).toGMTString(),
+        updatedAt:(new Date()).toGMTString(),
+        registerBy,
+      }
+    await doc.set(body);
 
     log.info(`Singer ${singerName} created succesfully`);
-    return res.send(200, successResponse(`Singer ${singerName} created succesfully`));
+    return res.send(200, successResponse(body, `Singer ${singerName} created succesfully`));
   } catch (err) {
     log.error(err);
     return res.status(500).send(errorToResponse('Error creating singer'));
@@ -33,24 +34,27 @@ const createSingerInDb = async (req, res) => {
 };
 
 const updateSingerInDb = async (req, res) => {
-  const { singerId } = req.body;
+  const { singerId, singerName } = req.body;
   log.info(`Updating category ${singerId}`);
   try {
     const doc = await firestoreRef.collection(collection)
       .doc(singerId);
     const values = await doc.get();
 
+    const body = {
+      singerId,
+      singerName,
+      status: true,
+      createdAt: (new Date()).toGMTString(),
+      updatedAt: (new Date()).toGMTString(),
+      registerBy,
+      updatedBy: registerBy
+    }
+
     if (values.exists) {
-      await doc.update({
-        singerName,
-        status: true,
-        createdAt: (new Date()).toGMTString(),
-        updatedAt: (new Date()).toGMTString(),
-        registerBy,
-        updatedBy: registerBy
-      });
+      await doc.update(body);
       log.info(`Singer ${singerId} updated succesfully`);
-      return res.send(successResponse(`Singer ${singerId} updated succesfully`));
+      return res.send(successResponse(body, `Singer ${singerId} updated succesfully`));
     }
 
     log.error(`Singer ${singerId} does not exist`);
