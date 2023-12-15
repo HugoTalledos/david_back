@@ -34,8 +34,8 @@ const corsOptionsDelegate = (req, callback) => {
 
 app.use(cors(corsOptionsDelegate));
 
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-app.use(express.json({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '100gb' }));
+app.use(express.urlencoded({ limit: '100gb', extended: true }));
 
 const port = process.env.PORT || 8080;
 

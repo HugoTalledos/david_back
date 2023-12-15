@@ -6,29 +6,32 @@ const log = logger({ fileName: 'Auth.js' });
 const { getToken, getTokenAdmin, logout } = require('../repository/AuthRepository');
 const { errorToResponse, successResponse } = require('../utils/utils');
 
-const login = async (req, res) => {
-  const { email, password, type = 'user' } = req.body;
-  log.info(`Start login process for ${email}`);
+
+const getUser = async (req, res) => {
+  const { userId } = req.body;
+  log.info(`Start login process for ${userId}`);
   try {
     if (!firestoreRef) {
       log.error('Couldn\'t connect to database');
       return res.status(500).send(errorToResponse('Couldn\'t connect to database'));
     }
-    let userInfo;
-    if (type === 'user') 
-      userInfo = await getToken({ email, password });
-    else if (type === 'admin') {
-      userInfo = await getTokenAdmin({ email, password });
-    }
+    
+    return firestoreRef.collection('userdb')
+      .doc(userId)
+      .get()
+      .then((doc) => {
+        if (!doc.exists) return res.status(401).send(errorToResponse('User not found'));
 
-    const { success, code, data, message } = userInfo;
-    if (!success) return res.status(code).send(errorToResponse(message));
-
-    log.info(`Succes login for ${email}`)
-
-    return res.send(successResponse({ ...data }, message));
+        log.info(`User ${userId} found`);
+        return res.send(successResponse(doc.data()));
+      })
+      .catch((err) => {
+        log.error(err);
+        return res.status(500).send(errorToResponse(err, 'Error getting data from firestore'));
+      });
   } catch (e) {
     log.error('Unnexpected error', e);
+    return res.status(500).send(errorToResponse('Couldn\'t connect to database'));
   }
 }
 
@@ -49,4 +52,4 @@ const logoutService = async (req, res) => {
   }
 }
 
-module.exports = { login, logoutService };
+module.exports = { getUser, logoutService };

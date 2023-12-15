@@ -5,7 +5,13 @@ const service = require('../service/Song');
 
 const router = express.Router();
 
-router.post('/', service.getSongByName);
+router.post('/a', service.getSongByName);
 router.delete('/:setId/:configId', service.deleteSetFromDb);
+
+
+router.post('/', service.createSongInDb);
+router.put('/', service.updateSongInDb);
+router.post('/all', service.getAllSongsFromDb);
+router.post('/:songId', service.deleteSongFromDb);
 
 module.exports = router;

@@ -5,6 +5,11 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "env": {
+        "BUCKET_NAME": "gs://catalogo-test.appspot.com",
+        "PROJECT_ID": "catalogo-test",
+        "GCP_ENV": "leita"
+      },
       "type": "node",
       "request": "launch",
       "name": "Launch Program",
