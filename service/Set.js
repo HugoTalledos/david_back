@@ -6,7 +6,7 @@ const setRepository = require('../repository/SetRepository');
 
 const log = logger({ fileName: 'Set.js' });
 const collection = 'public';
-const songCollection = 'configuration';
+const songCollection = 'songs';
 
 const createSetInDb = async (req, res) => {
   const { setName, setDescription, songList } = req.body;
@@ -22,13 +22,10 @@ const createSetInDb = async (req, res) => {
     const setDoc = await firestoreRef.collection(collection)
       .doc(setId);
 
-    const songIdList = songList.map((song) => song.songId);
-
     await setDoc.set({
       setId,
       setName,
       setDescription,
-      songIdList,
       status: true,
       createdAt:(new Date()).toGMTString(),
       updatedAt:(new Date()).toGMTString(),
@@ -37,13 +34,15 @@ const createSetInDb = async (req, res) => {
     });
     log.info(`Set created successfully`);
 
-    const songConfigDoc = setDoc.collection(songCollection).doc();
+    const songConfigDoc = setDoc.collection(songCollection);
 
     for (let i = 0; i < songList.length; i++) {
-      const song = songList[i];
-      log.info(`Creating song config: ${song.id}`);
-      await songConfigDoc.set({
-        ...song,
+      const { songId, ...all } = songList[i];
+      const songDoc = songConfigDoc.doc(songId);
+  
+      await songDoc.set({
+        songId,
+        ...all,
         status: true,
         createdAt: (new Date()).toGMTString(),
         updatedAt: (new Date()).toGMTString(),
@@ -61,6 +60,7 @@ const createSetInDb = async (req, res) => {
 
 const updateSetInDb = async (req, res) => {
   const { setId, songList = [], ...all } = req.body;
+  console.log('🚀 ~ file: Set.js:63 ~ updateSetInDb ~ songList:', songList);
   log.info(`Updating set ${setId}`);
   const updatedBy = 'updated';
 
@@ -75,12 +75,9 @@ const updateSetInDb = async (req, res) => {
     const doc = await route.get();
     if (!doc.exists) return res.status(500).send(errorToResponse('Set not found or deleted'));
 
-    const songIdList = songList.map((song) => song.songId);
-
     await route.set({
       setId,
       ...all,
-      songIdList,
       updatedAt:( new Date()).toGMTString(),
       updatedBy
     }, { merge: true });
@@ -94,15 +91,13 @@ const updateSetInDb = async (req, res) => {
       });
 
     for (let i = 0; i < songList.length; i++) {
-      const { configId, songId, tonality, tempo, order = 0, songTonality, songTempo } = songList[i];
-      const songConfig = configId != undefined ? songConfigCollect.doc(configId) : songConfigCollect.doc();
+      const { songId, ...all } = songList[i];
+      const songConfig = songConfigCollect.doc(songId);
       log.info(`Updating song config: ${songId}`);
 
       await songConfig.set({
         songId,
-        tonality: tonality || songTonality,
-        tempo: tempo || songTempo,
-        order,
+        ...all,
         status: true,
         updatedAt: (new Date()).toGMTString(),
         updatedBy
@@ -136,40 +131,9 @@ const getSetFromDb = async (req, res) => {
     if (!doc.exists || !setStatus)
       return local ? {} : res.status(409).send(errorToResponse('Set not found or deleted'));
     
-    const originalSongs = await setRepository.getSongsById(songIdList);
-
-    const songConfig = await (route.collection(songCollection).where('status', '==', true)).get();
-    const songsConfig = [];
-
-    if (originalSongs && originalSongs.length > 0 && songConfig.size > 0) {
-      (originalSongs).forEach(({ data: originalSong }) => {
-        const { id, attributes } = originalSong;
-        const { singers, lyrics, multitrack } = attributes;
-        const snapSong = songConfig.docs.find(song => song.data().songId == id);
-        const config = snapSong ? snapSong.data() : {};
-        const singerList = (singers.data || []).map(({ attributes }) => attributes.si_name);
-        const lyricObject = lyrics.data[0].attributes;
-        const { ly_lyric: lyric , ly_chords: chord } = lyricObject || {};
-        const { attributes: attMultitrack } = multitrack.data || {};
-
-        const song = {
-          songId: id,
-          configId: snapSong ? snapSong.id : songsConfig.length,
-          singer: singerList.join(','),
-          songName: attributes.so_name,
-          songResourse: config.resource || attributes.so_resource,
-          songTonality: config.tonality || attributes.so_tonality,
-          songTempo: config.tempo || attributes.so_bpm,
-          order: config.order || attributes.order,
-          multitrack: attMultitrack ? attMultitrack.url : '',
-          lyric,
-          chords: chord,
-        };
-        songsConfig.push(song);
-      });
-    }
-    
-    const response = { ...set, songsConfig };
+    const filterSongs = await (route.collection(songCollection).where('status', '==', true)).get();
+    const songConfig = filterSongs.docs.map((doc) => doc.data());
+    const response = { ...set, songConfig };
 
     return local ? response : res.send(successResponse(response));
   } catch (error) {

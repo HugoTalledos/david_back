@@ -12,6 +12,7 @@ router.delete('/:setId/:configId', service.deleteSetFromDb);
 router.post('/', service.createSongInDb);
 router.put('/', service.updateSongInDb);
 router.post('/all', service.getAllSongsFromDb);
-router.post('/:songId', service.deleteSongFromDb);
+router.get('/:songId', service.getSongById);
+router.post('/change-status', service.deleteSongFromDb);
 
 module.exports = router;
