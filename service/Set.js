@@ -60,7 +60,6 @@ const createSetInDb = async (req, res) => {
 
 const updateSetInDb = async (req, res) => {
   const { setId, songList = [], ...all } = req.body;
-  console.log('🚀 ~ file: Set.js:63 ~ updateSetInDb ~ songList:', songList);
   log.info(`Updating set ${setId}`);
   const updatedBy = 'updated';
 
