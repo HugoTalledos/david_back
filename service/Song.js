@@ -74,30 +74,24 @@ const deleteSetFromDb = async (req, res) => {
 }
 
 const createSongInDb = async (req, res) => {
-  const { songName, bufferList, ...all } = req.body;
+  const { songId, songName, secuence = [], ...all } = req.body;
   log.info(`Creating song ${songName}`);
   if (firestoreRef) {
     try {
       const doc = await firestoreRef.collection(collectionSong)
-        .doc();
-      const path = `songs/${doc.id}`;
-
-      let imagePromises = [];
-      if (bufferList) {
-        imagePromises = await loadTrack(bufferList, doc.id, path);
-      }
-
+        .doc(songId);
       let body = {
         songId: doc.id,
+        secuence,
         songName,
         ...all,
+        version: 1,
         status: true,
         createdAt:(new Date()).toGMTString(),
         updatedAt:(new Date()).toGMTString(),
         registerBy,
       }
-
-      await doc.set({ ...body, secuence: [...imagePromises] });
+      await doc.set(body);
       log.info(`Song ${songName} created`);
       return res.send(successResponse(body, `Song ${songName} created succesfull`));
     } catch (err) {
@@ -129,33 +123,13 @@ const updateSongInDb = async (req, res) => {
       updatedBy: registerBy
     }
 
-    if (bufferList.length === 0) {
-      await doc.update(body);
-      log.info(`Song ${songId} updated`);
-      return res.status(200).send(successResponse(body, `Song ${songName} ok update`));
-    }
-
-    if (values.exists) {
-      const path = `/songs/${songId}`;
-      const imagePromises = loadTrack(bufferList, songId, path);
-
-      return Promise.all(imagePromises)
-        .then(async (downloadURLs) => {
-          const urls = downloadURLs.map(([url]) => url);
-          await doc.update({ ...body, secuences: [...urls, ...secuences] });
-          log.info(`Song ${songId} updated`);
-          return res.send(successResponse(body, `Song ${songName} update succesfull`));
-        })
-        .catch((err) => {
-          log.error(err);
-          return res.status(500).send(errorToResponse(err));
-        });
-    }
+    await doc.update(body);
+    log.info(`Song ${songId} updated`);
+    return res.status(200).send(successResponse(body, `Song ${songName} ok update`));
   } catch (error) {
     log.error(error);
     return res.status(500).send(errorToResponse('Couldn\'t connect to database'));
   }
-  return res.status(500).send(errorToResponse('Couldn\'t connect to database'));
 };
 
 const getSongById = async (req, res) => {
