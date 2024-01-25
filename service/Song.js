@@ -1,14 +1,13 @@
 const logger = require('../utils/logger');
 
 const { firestoreRef } = require('../drivers/firestore');
-const { generateId, successResponse, errorToResponse } = require('../utils/utils');
+const { successResponse, errorToResponse } = require('../utils/utils');
 const SetRepository = require('../repository/SetRepository');
+const songRepository = require('../repository/SongRepository');
 
 const log = logger({ fileName: 'Song.js' });
 const collection = 'public';
-const collectionSong = 'song';
 const songCollection = 'configuration';
-const registerBy = 'test';
 
 const getSongByName = async (req, res) => {
   const { songName } = req.body;
@@ -74,58 +73,29 @@ const deleteSetFromDb = async (req, res) => {
 }
 
 const createSongInDb = async (req, res) => {
-  const { songId, songName, secuence = [], ...all } = req.body;
+  const { songId, ...all } = req.body;
   log.info(`Creating song ${songName}`);
-  if (firestoreRef) {
-    try {
-      const doc = await firestoreRef.collection(collectionSong)
-        .doc(songId);
-      let body = {
-        songId: doc.id,
-        secuence,
-        songName,
-        ...all,
-        version: 1,
-        status: true,
-        createdAt:(new Date()).toGMTString(),
-        updatedAt:(new Date()).toGMTString(),
-        registerBy,
-      }
-      await doc.set(body);
-      log.info(`Song ${songName} created`);
-      return res.send(successResponse(body, `Song ${songName} created succesfull`));
-    } catch (err) {
-      log.error(err);
-      return res.status(500).send(errorToResponse(err, 'Error creating data in firestore'));
-    }
+  try {
+    const songCreated = await songRepository.createSongInDb(songId, all);
+
+    if (!songCreated) return res.status(500).send(errorToResponse(err, 'Error creating data in firestore'));
+
+    return res.send(successResponse(songCreated, `Song ${songCreated.songName} created succesfull`));
+  } catch (err) {
+    log.error(err);
+    return res.status(500).send(errorToResponse('Couldn\'t connect to database'));
   }
-  log.error('Couldn\'t connect to database');
-  return res.status(500).send(errorToResponse('Couldn\'t connect to database'));
 };
 
 const updateSongInDb = async (req, res) => {
-  const { bufferList, songId, songName, secuences, ...data  } = req.body;
+  const { songId, ...data  } = req.body;
   log.info(`Updating song ${songId}`);
 
   try {
-    const doc = await firestoreRef.collection(collectionSong)
-      .doc(songId);
+    const updatedSong = await songRepository.updateSongInDb(songId, data);
 
-    const values = await doc.get();
-
-    let body = {
-      songName,
-      ...data,
-      status: true,
-      createdAt: (new Date()).toGMTString(),
-      updatedAt: (new Date()).toGMTString(),
-      registerBy,
-      updatedBy: registerBy
-    }
-
-    await doc.update(body);
-    log.info(`Song ${songId} updated`);
-    return res.status(200).send(successResponse(body, `Song ${songName} ok update`));
+    if (!updatedSong)  return res.status(500).send(errorToResponse('Song not found or deleted'));
+    return res.status(200).send(successResponse(updatedSong, `Song ${updatedSong.songName} ok update`));
   } catch (error) {
     log.error(error);
     return res.status(500).send(errorToResponse('Couldn\'t connect to database'));
@@ -136,17 +106,15 @@ const getSongById = async (req, res) => {
   const { songId } = req.params;
   log.info(`Find song ${songId}`);
   try {
-    const doc = await firestoreRef.collection(collectionSong)
-      .doc(songId);
+    const song = await songRepository.getSongById(songId);
 
-    const values = await doc.get();
-    if (values.exists) {
-      log.info(`Song ${songId} found`);
-      return res.send(successResponse(values.data()));
-    } else {
+    if (!song) {
       log.warn(`Song ${songId} doesn't exist`);
       return res.status(500).send(errorToResponse(`Song ${songId} does not exist`));
     }
+
+    log.info(`Song ${songId} found`);
+    return res.send(successResponse(song));
   } catch (error) {
     log.error(error.message);
     return res.status(500).send(errorToResponse('Couldn\'t connect to database'));
@@ -155,7 +123,7 @@ const getSongById = async (req, res) => {
 
 const getAllSongsFromDb = async (req, res) => {
   const {
-    limit, lastItem = null,
+    limit = 20, lastItem = null,
     orderKey = 'songName', order = 'asc',
   } = req.body;
 
@@ -164,17 +132,11 @@ const getAllSongsFromDb = async (req, res) => {
   try {
     const limitInt = parseInt(limit, 10);
 
-    return firestoreRef.collection(collectionSong)
-      .orderBy(orderKey, order)
-      .startAfter(lastItem)
-      .limit(limitInt)
-      .get()
-      .then((snapshot) => {
-        const songs = [];
-        snapshot.forEach((doc) => songs.push({ songId: doc.id, ...doc.data() }));
-        log.info('Songs retrieved');
-        return res.send(successResponse(songs));
-      });
+    const songs = await songRepository.getAllSongs({ orderKey, order, lastItem, limitInt });
+    
+    if (!songs) return res.status(500).send(errorToResponse('Couldn\'t connect to database'));
+
+    return res.send(successResponse(songs));
   } catch (error) {
     log.error(error.message);
     return res.status(500).send(errorToResponse('Couldn\'t connect to database'));
@@ -185,25 +147,11 @@ const deleteSongFromDb = async (req, res) => {
   const { songId, status } = req.body;
   log.info(`Deleting song ${songId}`);
   try {
-    const doc = await firestoreRef.collection(collectionSong)
-      .doc(songId);
+    const deletedSong = await songRepository.deleteSong(songId, status);
 
-    const values = await doc.get();
-    if (values.exists) {
-      try {
-        await doc.set({
-          status,
-        }, { merge: true });
-        log.info(`Song ${songId} deleted`);
-        return res.send(successResponse(values.data(), `Song ${songId} delete succesfull`));
-      } catch (err) {
-        log.error(err.message);
-        return res.status(500).send(errorToResponse(err, 'Error deleting data from firestore'));
-      }
-    } else {
-      log.error(`Song ${songId} doesn't exist`);
-      return res.status(500).send(errorToResponse(`Song ${songId} does not exist`));
-    }
+    if (!deletedSong) return res.status(500).send(errorToResponse(err, 'Error deleting data from firestore'));
+
+    return res.send(successResponse(deletedSong, `Song ${songId} delete succesfull`));
   } catch (error) {
     log.error(error.message);
     return res.status(500).send(errorToResponse('Couldn\'t connect to database'));
