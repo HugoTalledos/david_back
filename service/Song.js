@@ -1,7 +1,7 @@
 const logger = require('../utils/logger');
 
 const { firestoreRef } = require('../drivers/firestore');
-const { generateId, successResponse, errorToResponse, loadTrack } = require('../utils/utils');
+const { generateId, successResponse, errorToResponse } = require('../utils/utils');
 const SetRepository = require('../repository/SetRepository');
 
 const log = logger({ fileName: 'Song.js' });
