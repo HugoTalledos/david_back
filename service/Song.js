@@ -74,7 +74,7 @@ const deleteSetFromDb = async (req, res) => {
 
 const createSongInDb = async (req, res) => {
   const { songId, ...all } = req.body;
-  log.info(`Creating song ${songName}`);
+  log.info(`Creating song ${songId}`);
   try {
     const songCreated = await songRepository.createSongInDb(songId, all);
 
