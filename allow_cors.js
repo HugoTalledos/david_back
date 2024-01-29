@@ -2,13 +2,10 @@ module.exports = {
   local: [
     'http://localhost:3000',
     'http://localhost:5000',
-    'undefined'
+    'http://192.168.1.13:3000'
   ],
   dev: [
-    'https://catalogo-test.web.app',
-    'https://dev-leita-admin.web.app',
-    'https://catalogo-test.firebaseapp.com',
-    'https://dev-leita-admin.firebaseapp.com',
+    'https://enhacoread.web.app',
   ],
   prod: [],
 };
