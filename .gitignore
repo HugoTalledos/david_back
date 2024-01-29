@@ -170,5 +170,14 @@ dist
 .ionide
 leita-credentials.json
 
+deploy/environments
+.env
+.env.local
+.env.dev
+.env.prod
+
+deploy/credentials
+*-credentials.json
+
 
 # End of https://www.toptal.com/developers/gitignore/api/node,firebase,visualstudiocode

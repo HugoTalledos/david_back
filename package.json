@@ -4,6 +4,13 @@
   "description": "",
   "main": "app.js",
   "scripts": {
+    "start": "node app.js",
+    "local": "nodemon -r dotenv/config lazy.js",
+    "build-dev": "deploy\\pre_deploy.bat dev",
+    "build-prod": "sh ./deploy/pre_deploy.sh prod",
+    "deploy": "gcloud app deploy",
+    "lint": "eslint . -c .eslintrc.json --ignore-path .eslintignore ",
+    "fix": "eslint . -c .eslintrc.json --ignore-path .eslintignore --fix",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
